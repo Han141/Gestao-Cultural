@@ -7,12 +7,13 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependências (O GitHub não precisa disso, a Vercel baixa sozinha)
 node_modules
 dist
 dist-ssr
 *.local
 
-# Editor directories and files
+# Editor de Código (Coisas do seu VS Code ou Mac/Windows)
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -22,3 +23,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# ⚠️ SEGURANÇA MÁXIMA (Ignora senhas e chaves de API) ⚠️
+.env
+.env.*
+!.env.example
+
+# Outros
+build
+coverage
