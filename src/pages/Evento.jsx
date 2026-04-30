@@ -10,7 +10,6 @@ export default function Evento({ reservas }) {
 
   const isGratuito = evento.valor === 0;
 
-  // NOVA LÓGICA DE COMPRA COM VALIDAÇÃO DE LOGIN
   const comprarIngresso = () => {
     const user = JSON.parse(localStorage.getItem('user_sessao'));
     
@@ -21,7 +20,6 @@ export default function Evento({ reservas }) {
     }
 
     alert(`Sucesso, ${user.nome}! ${isGratuito ? "Seu ingresso gratuito foi reservado." : "Redirecionando para o pagamento..."}`);
-    // Num sistema real, aqui salvaríamos a compra no banco de dados.
     navigate('/dashboard');
   };
 
@@ -36,7 +34,6 @@ export default function Evento({ reservas }) {
         </div>
       </nav>
 
-      {/* Hero Imagem */}
       <div className="max-w-5xl mx-auto mt-6 px-4">
         <div className="w-full h-[40vh] md:h-[50vh] rounded-2xl overflow-hidden shadow-lg relative bg-gray-900">
           <img 
@@ -49,7 +46,6 @@ export default function Evento({ reservas }) {
 
       <main className="max-w-5xl mx-auto px-4 mt-8 grid md:grid-cols-3 gap-8">
         
-        {/* Lado Esquerdo: Detalhes do Evento */}
         <div className="md:col-span-2 space-y-8">
           <div>
             <h1 className="text-4xl font-extrabold text-gray-900 mb-4">{evento.titulo}</h1>
@@ -77,7 +73,6 @@ export default function Evento({ reservas }) {
           </div>
         </div>
 
-        {/* Lado Direito: Box de Ingressos (Estilo Sympla) */}
         <div className="md:col-span-1">
           <div className="bg-white p-6 rounded-2xl shadow-xl border border-gray-100 sticky top-24">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Ingressos</h3>

@@ -1,198 +1,185 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
 import { Link } from 'react-router-dom';
+import { Search, Calendar, MapPin, Ticket, Sparkles } from 'lucide-react'; 
+import { motion } from 'framer-motion'; 
 
-export default function Home({ reservas = [] }) {
-  const [filtro, setFiltro] = useState('Todos');
+export default function Home() {
+  const [eventos, setEventos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [busca, setBusca] = useState('');
+  const [categoria, setCategoria] = useState('Todos');
+  const [paginaAtual, setPaginaAtual] = useState(0);
+  const [temMais, setTemMais] = useState(true);
+  const itensPorPagina = 6;
 
-  // Filtramos apenas os eventos que já foram validados por um funcionário
-  const eventosAprovados = reservas.filter(r => r.status === 'aprovado');
+  useEffect(() => {
+    fetchEventos();
+  }, [paginaAtual, busca, categoria]);
 
-  // Lógica de filtragem por categoria
-  const eventosFiltrados = filtro === 'Todos'
-    ? eventosAprovados
-    : eventosAprovados.filter(e => {
-        // Usa fallback para string vazia caso o evento não tenha descrição
-        const busca = (e.espaco + e.titulo + (e.descricao || '')).toLowerCase();
-        if (filtro === 'Teatro') return busca.includes('teatro');
-        if (filtro === 'Música') return busca.includes('musica') || busca.includes('show') || busca.includes('banda');
-        if (filtro === 'Stand Up') return busca.includes('stand up') || busca.includes('comedia');
-        if (filtro === 'Arte') return busca.includes('galeria') || busca.includes('arte') || busca.includes('exposição');
-        return true;
-      });
+  const handleFiltroMudou = () => setPaginaAtual(0);
 
-  // Imagem de fallback
-  const getImagemPadrao = (espaco) => {
-    if (!espaco) return 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=800&q=80';
-    if (espaco.includes('Teatro')) return 'https://images.unsplash.com/photo-1507676184212-d0330a15233c?auto=format&fit=crop&w=800&q=80';
-    if (espaco.includes('Galeria')) return 'https://images.unsplash.com/photo-1536924940846-227afb31e2a5?auto=format&fit=crop&w=800&q=80';
-    return 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=800&q=80';
+  const fetchEventos = async () => {
+    setLoading(true);
+    let query = supabase.from('eventos').select('*').eq('status', 'aprovado').order('data', { ascending: true });
+    if (busca.trim() !== '') query = query.ilike('titulo', `%${busca}%`);
+    if (categoria !== 'Todos') query = query.eq('categoria', categoria);
+    const inicio = paginaAtual * itensPorPagina;
+    const fim = inicio + itensPorPagina - 1;
+    query = query.range(inicio, fim);
+    const { data, error } = await query;
+    if (!error) {
+      setEventos(data);
+      setTemMais(data.length === itensPorPagina);
+    }
+    setLoading(false);
+  };
+
+  const categoriasMenu = ['Todos', 'Teatro', 'Música', 'Dança', 'Cinema', 'Exposição'];
+
+  const containerAnimado = {
+    oculto: { opacity: 0 },
+    visivel: { opacity: 1, transition: { staggerChildren: 0.1 } }
+  };
+
+  const cardAnimado = {
+    oculto: { opacity: 0, y: 20 },
+    visivel: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0b1120] transition-colors duration-300">
       
-      {/* Barra de Navegação Principal */}
-      <nav className="bg-white/95 backdrop-blur-md sticky top-0 z-50 border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <Link to="/" className="flex items-center gap-2">
-            <span className="text-2xl font-black text-gray-900 tracking-tighter uppercase">
-              Cultura<span className="text-blue-600">Digital</span>
+      <div className="relative pt-16 pb-24 md:pt-24 md:pb-32 text-center overflow-hidden border-b border-gray-200 dark:border-white/5">
+        
+        <div 
+          className="absolute inset-0 z-0 opacity-[0.03] dark:opacity-[0.15] pointer-events-none"
+          style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)', backgroundSize: '32px 32px' }}
+        ></div>
+
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-r from-cyan-500/20 to-purple-600/20 dark:from-cyan-500/10 dark:to-purple-600/10 blur-[100px] rounded-full pointer-events-none z-0"></div>
+        
+        <div className="relative z-10 flex flex-col items-center px-4">
+          <span className="flex items-center gap-2 text-cyan-600 dark:text-cyan-400 font-bold uppercase tracking-[0.2em] text-xs mb-6 px-4 py-1.5 rounded-full border border-cyan-500/20 bg-cyan-500/10">
+            <Sparkles size={14} className="animate-pulse" /> Sistema de Curadoria
+          </span>
+          
+          <h1 className="text-5xl md:text-7xl font-black text-gray-900 dark:text-white mb-6 tracking-tight leading-tight">
+            Cultura em <br className="md:hidden" />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500">
+              Movimento
             </span>
-          </Link>
-          <div className="flex items-center gap-6">
-            <Link to="/login" className="text-sm font-bold text-gray-700 hover:text-blue-600 transition">
-              Criar Evento
-            </Link>
-            <Link to="/login" className="bg-blue-600 text-white px-6 py-2 rounded-full font-bold hover:bg-blue-700 transition shadow-md text-sm">
-              Entrar
-            </Link>
+          </h1>
+          
+          <p className="text-gray-600 dark:text-gray-400 text-lg max-w-2xl mx-auto mb-12 font-medium">
+            Descubra espetáculos e shows de alta performance, aprovados e sincronizados em tempo real.
+          </p>
+
+          <div className="w-full max-w-2xl relative group z-20">
+            <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-gray-400 dark:text-gray-500 group-focus-within:text-cyan-500 transition-colors">
+              <Search size={20} />
+            </div>
+            <input 
+              type="text" 
+              placeholder="Buscar evento..." 
+              value={busca}
+              onChange={(e) => { setBusca(e.target.value); handleFiltroMudou(); }}
+              className="w-full py-5 pl-14 pr-6 rounded-2xl bg-white/70 dark:bg-[#111827]/80 backdrop-blur-xl border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 shadow-2xl focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 text-lg transition-all"
+            />
+            <div className="absolute inset-y-0 right-0 pr-5 flex items-center pointer-events-none">
+            </div>
           </div>
         </div>
-      </nav>
+      </div>
 
-      {/* Hero Section */}
-      <header className="relative bg-gray-900 flex items-center justify-center min-h-[50vh]">
-        <div className="absolute inset-0 overflow-hidden">
-          <img
-            src="https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1600&q=80"
-            alt="Fundo Cultural"
-            className="w-full h-full object-cover opacity-30"
-          />
-        </div>
-        <div className="relative max-w-4xl mx-auto px-4 text-center z-10">
-          <span className="bg-blue-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest mb-4 inline-block">
-            Projeto de Extensão II - ADS
-          </span>
-          <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-6 leading-tight">
-            A tecnologia impulsionando a <br/>
-            <span className="text-blue-400">cultura local.</span>
-          </h1>
-          <p className="text-lg text-gray-300 max-w-2xl mx-auto font-light">
-            Plataforma desenvolvida para auxiliar artistas, teatros e centros culturais na 
-            gestão e divulgação de eventos para a nossa comunidade.
-          </p>
-        </div>
-      </header>
-
-      {/* Menu de Categorias */}
-      <div className="bg-white border-b shadow-sm sticky top-[72px] z-40">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex overflow-x-auto gap-4 justify-start md:justify-center scrollbar-hide">
-          {['Todos', 'Música', 'Teatro', 'Stand Up', 'Arte'].map(cat => (
+      <div className="max-w-7xl mx-auto p-6 md:p-10">
+        <div className="flex flex-wrap gap-3 justify-center mb-12 relative z-10 -mt-16 md:-mt-20">
+          {categoriasMenu.map(cat => (
             <button
               key={cat}
-              onClick={() => setFiltro(cat)}
-              className={`px-6 py-2 rounded-full font-bold whitespace-nowrap transition-all text-sm ${
-                filtro === cat
-                  ? 'bg-blue-600 text-white shadow-lg scale-105'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              onClick={() => { setCategoria(cat); handleFiltroMudou(); }}
+              className={`px-6 py-3 rounded-xl font-bold text-sm transition-all active:scale-95 border backdrop-blur-md ${
+                categoria === cat 
+                  ? 'bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/50 shadow-[0_0_15px_-3px_rgba(6,182,212,0.3)]' 
+                  : 'bg-white/80 dark:bg-[#111827]/80 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-white/10 hover:border-cyan-500/30 hover:text-cyan-500'
               }`}
             >
               {cat}
             </button>
           ))}
         </div>
-      </div>
 
-      {/* Listagem de Eventos */}
-      <main className="max-w-7xl mx-auto py-12 px-4">
-        <div className="mb-10">
-          <h2 className="text-3xl font-black text-gray-900">Eventos em Destaque</h2>
-          <div className="h-1 w-20 bg-blue-600 mt-2"></div>
-        </div>
-
-        {eventosFiltrados.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-300">
-            <p className="text-xl text-gray-400 font-medium">Não foram encontrados eventos aprovados nesta categoria.</p>
-            <button onClick={() => setFiltro('Todos')} className="mt-4 text-blue-600 font-bold hover:underline">
-              Ver todos os eventos
-            </button>
+        {loading && eventos.length === 0 ? (
+           <div className="text-center py-20 text-cyan-500 animate-pulse">Sincronizando banco de dados...</div>
+        ) : eventos.length === 0 ? (
+          <div className="text-center py-20">
+             <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gray-100 dark:bg-white/5 text-gray-400 mb-4 border border-gray-200 dark:border-white/10">
+               <Search size={32} />
+             </div>
+             <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200">Nenhum evento detectado</h3>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {eventosFiltrados.map(evento => (
-              <Link 
-                to={`/evento/${evento.id}`} 
-                key={evento.id} 
-                className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 group border border-gray-100"
-              >
-                {/* Imagem do Evento */}
-                <div className="relative h-52 overflow-hidden">
-                  <img
-                    src={evento.imagem || getImagemPadrao(evento.espaco)}
-                    alt={evento.titulo}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                  />
-                  {/* Etiqueta de Preço COM PROTEÇÃO (evita o erro toFixed) */}
-                  <div className={`absolute bottom-4 right-4 px-3 py-1.5 rounded-lg font-black text-xs shadow-lg ${
-                    !evento.valor || evento.valor === 0 ? 'bg-green-500 text-white' : 'bg-white text-gray-900'
-                  }`}>
-                    {!evento.valor || evento.valor === 0 ? 'GRATUITO' : `R$ ${Number(evento.valor).toFixed(2).replace('.', ',')}`}
+          <>
+            <motion.div 
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+              variants={containerAnimado}
+              initial="oculto"
+              animate="visivel"
+            >
+              {eventos.map(ev => (
+                <motion.div key={ev.id} variants={cardAnimado} className="bg-white dark:bg-[#111827] rounded-2xl overflow-hidden border border-gray-200 dark:border-white/10 shadow-lg hover:border-cyan-500/50 dark:hover:border-cyan-500/50 hover:shadow-[0_0_30px_-5px_rgba(6,182,212,0.2)] transition-all flex flex-col group">
+                  <div className="h-56 bg-gray-100 dark:bg-gray-800 relative overflow-hidden">
+                    {ev.capa_url ? (
+                      <img src={ev.capa_url} alt={ev.titulo} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-90 group-hover:opacity-100" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-300 dark:text-gray-700">
+                        <Ticket size={48} />
+                      </div>
+                    )}
+                    <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-md uppercase tracking-wider border border-white/10">
+                      {ev.categoria}
+                    </div>
                   </div>
-                </div>
 
-                {/* Conteúdo Informativo */}
-                <div className="p-6">
-                  <p className="text-blue-600 text-xs font-bold uppercase tracking-widest mb-2">
-                    {evento.data ? evento.data.split('-').reverse().join(' / ') : 'Sem data'}
-                  </p>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors line-clamp-1">
-                    {evento.titulo || 'Evento Cultural'}
-                  </h3>
-                  <div className="flex items-center text-gray-500 text-sm mb-4">
-                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    {evento.espaco}
+                  <div className="p-6 flex-1 flex flex-col justify-between">
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white leading-tight mb-4 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
+                        {ev.titulo}
+                      </h3>
+                      
+                      <div className="space-y-3 mb-6">
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-3">
+                          <span className="p-1.5 rounded-lg bg-gray-100 dark:bg-white/5"><Calendar size={14} className="text-cyan-600 dark:text-cyan-400" /></span>
+                          {new Date(ev.data).toLocaleDateString('pt-BR')}
+                        </p>
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-3">
+                          <span className="p-1.5 rounded-lg bg-gray-100 dark:bg-white/5"><MapPin size={14} className="text-cyan-600 dark:text-cyan-400" /></span>
+                          <span className="truncate">{ev.espaco}</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <Link to={`/evento/${ev.id}`} className="w-full bg-gray-900 dark:bg-white/5 hover:bg-cyan-600 dark:hover:bg-cyan-500/20 border border-transparent dark:border-white/10 hover:border-cyan-500/50 text-white dark:text-cyan-300 font-bold text-center py-3 px-5 rounded-xl transition-all">
+                      Acessar Terminal de Ingressos
+                    </Link>
                   </div>
-                  
-                  <div className="pt-4 border-t border-gray-50 flex justify-between items-center">
-                    <span className="text-xs text-gray-400">Por {evento.responsavel || 'Desconhecido'}</span>
-                    <span className="text-blue-600 text-xs font-bold uppercase group-hover:translate-x-1 transition-transform">
-                      Ver Bilhetes →
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+                </motion.div>
+              ))}
+            </motion.div>
+
+            {/* PAGINAÇÃO */}
+            <div className="mt-16 flex justify-center items-center gap-4">
+              <button onClick={() => setPaginaAtual(prev => Math.max(0, prev - 1))} disabled={paginaAtual === 0} className="px-5 py-2.5 rounded-xl font-bold border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-400 bg-transparent disabled:opacity-30 hover:bg-white/5 hover:text-cyan-400 hover:border-cyan-500/30 transition-all">
+                &larr; Voltar
+              </button>
+              <span className="font-bold text-sm text-gray-500 tracking-widest uppercase">Pag {paginaAtual + 1}</span>
+              <button onClick={() => setPaginaAtual(prev => prev + 1)} disabled={!temMais} className="px-5 py-2.5 rounded-xl font-bold border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-400 bg-transparent disabled:opacity-30 hover:bg-white/5 hover:text-cyan-400 hover:border-cyan-500/30 transition-all">
+                Avançar &rarr;
+              </button>
+            </div>
+          </>
         )}
-      </main>
-
-      {/* Footer Profissional */}
-      <footer className="bg-white border-t border-gray-200 pt-16 pb-8">
-        <div className="max-w-7xl mx-auto px-4 grid md:grid-cols-3 gap-12 mb-12">
-          <div>
-            <span className="text-xl font-black text-gray-900 tracking-tighter uppercase">
-              Cultura<span className="text-blue-600">Digital</span>
-            </span>
-            <p className="mt-4 text-sm text-gray-500 leading-relaxed">
-              Plataforma dedicada à promoção e difusão cultural regional, facilitando o acesso da população 
-              às artes e o gerenciamento de espaços públicos.
-            </p>
-          </div>
-          <div>
-            <h4 className="font-bold text-gray-900 mb-4">Links Rápidos</h4>
-            <ul className="text-sm text-gray-500 space-y-2">
-              <li><Link to="/login" className="hover:text-blue-600">Área do Artista</Link></li>
-              <li><Link to="/login" className="hover:text-blue-600">Acesso Administrativo</Link></li>
-              <li><Link to="/" className="hover:text-blue-600">Agenda Completa</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-bold text-gray-900 mb-4">Projeto de Extensão</h4>
-            <p className="text-sm text-gray-500">
-              CST em Análise e Desenvolvimento de Sistemas<br/>
-              Polo: [Seu Polo]<br/>
-              Estudante: Pedro
-            </p>
-          </div>
-        </div>
-        <div className="max-w-7xl mx-auto px-4 pt-8 border-t border-gray-100 text-center text-xs text-gray-400">
-          <p>© 2026 Sistema de Gestão Cultural Digital. Todos os direitos reservados.</p>
-        </div>
-      </footer>
-
+      </div>
     </div>
   );
 }
